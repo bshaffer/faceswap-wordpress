@@ -1,0 +1,27 @@
+vendor/*
+# all wordpress files
+index.php
+license.txt
+readme.html
+wp-activate.php
+wp-admin/*
+wp-blog-header.php
+wp-comments-post.php
+wp-config-sample.php
+wp-config.php
+wp-content/index.php
+wp-content/plugins/akismet/*
+wp-content/plugins/hello.php
+wp-content/plugins/index.php
+wp-content/plugins/insert-php/*
+wp-content/themes/*
+wp-cron.php
+wp-includes/*
+wp-links-opml.php
+wp-load.php
+wp-login.php
+wp-mail.php
+wp-settings.php
+wp-signup.php
+wp-trackback.php
+xmlrpc.php
