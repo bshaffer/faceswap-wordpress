@@ -22,7 +22,7 @@ class SettingsPage
     /**
      * Holds the values to be used in the fields callbacks
      */
-    private $options;
+    private static $options;
 
     /**
      * Start up
@@ -54,13 +54,11 @@ class SettingsPage
      */
     public function create_admin_page()
     {
-        // Set class property
-        $this->options = get_option('faceswap');
         print('<div class="wrap">');
         print('<form method="post" action="options.php">');
-        settings_fields('faceswap_option_group'),
-        do_settings_sections('faceswap-setting-admin'),
-        submit_button()
+        settings_fields('faceswap_option_group');
+        do_settings_sections('faceswap-setting-admin');
+        submit_button();
         print('</form>');
         print('</div>');
     }
@@ -146,7 +144,7 @@ class SettingsPage
     {
         printf(
             '<input type="text" id="project_id" name="faceswap[project_id]" value="%s" />',
-            isset($this->options['project_id']) ? esc_attr($this->options['project_id']) : ''
+            esc_attr(self::getProjectId())
         );
     }
 
@@ -157,7 +155,7 @@ class SettingsPage
     {
         printf(
             '<input type="text" id="bucket_name" name="faceswap[bucket_name]" value="%s" />',
-            isset($this->options['bucket_name']) ? esc_attr($this->options['bucket_name']) : ''
+            esc_attr(self::getBucketName())
         );
     }
 
@@ -168,7 +166,32 @@ class SettingsPage
     {
         printf(
             '<input type="text" id="service_url" name="faceswap[service_url]" value="%s" />',
-            isset($this->options['service_url']) ? esc_attr($this->options['service_url']) : ''
+            esc_attr(self::getServiceUrl())
         );
+    }
+
+    public static function getProjectId()
+    {
+        self::registerOptions();
+        return self::$options['project_id'];
+    }
+
+    public static function getBucketName()
+    {
+        self::registerOptions();
+        return self::$options['bucket_name'];
+    }
+
+    public static function getServiceUrl()
+    {
+        self::registerOptions();
+        return self::$options['service_url'];
+    }
+
+    private static function registerOptions()
+    {
+        if (is_null(self::$options)) {
+            self::$options = get_option('faceswap');
+        }
     }
 }

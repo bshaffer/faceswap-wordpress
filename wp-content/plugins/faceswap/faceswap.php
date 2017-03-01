@@ -40,20 +40,10 @@ if (is_admin()) {
     SettingsPage::register();
 }
 
-add_option('google_cloud_project_id');
-add_option('google_cloud_bucket_name');
-
 function get_cloud_storage()
 {
     return new StorageClient([
-        'projectId' => get_option('faceswap[project_id]'),
-    ]);
-}
-
-function get_cloud_datastore()
-{
-    return new DatastoreClient([
-        'projectId' => get_option('faceswap[project_id]'),
+        'projectId' => SettingsPage::getProjectId(),
     ]);
 }
 

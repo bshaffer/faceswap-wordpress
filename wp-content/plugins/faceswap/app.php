@@ -15,16 +15,15 @@
  * limitations under the License.
  */
 
+use Faceswap\SettingsPage;
 use GuzzleHttp\Client;
 use Symfony\Component\Form\Forms;
 
 $twig = get_twig();
 $storage = get_cloud_storage();
-$datastore = get_cloud_datastore();
-$options = get_option('faceswap');
-$projectId = $options['project_id'];
-$bucketName = $options['bucket_name'];
-$serviceUrl = $options['service_url'];
+$projectId = SettingsPage::getProjectId();
+$bucketName = SettingsPage::getBucketName();
+$serviceUrl = SettingsPage::getServiceUrl();
 $formFactory = Forms::createFormFactory();
 $form = $formFactory
     ->createBuilder('form')
@@ -62,9 +61,10 @@ if ($form->isValid()) {
     $http = new Client([
         'base_uri' => $serviceUrl
     ]);
+
     $response = $http->get('/', ['query' => [
-        'base_image' => $img1,
-        'face_image' => $img2,
+        'image1' => $img1,
+        'image2' => $img2,
         'bucket' => $bucketName
     ]]);
 
