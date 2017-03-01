@@ -1,0 +1,68 @@
+# This file configures the faceswap application frontend. The frontend serves
+# public web traffic.
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: faceswap-wordpress
+  labels:
+    app: faceswap
+# The faceswap wordpress replica set ensures that at least 3
+# instances of the faceswap app are running on the cluster.
+# For more info about Pods see:
+#   https://cloud.google.com/container-engine/docs/pods/
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: faceswap
+        tier: wordpress
+    spec:
+      containers:
+      - name: faceswap-wordpress
+        # Replace $GCLOUD_PROJECT with your project ID or use `make template`.
+        image: gcr.io/cloud-next-php/faceswap-wordpress
+        # This setting makes nodes pull the docker image every time before
+        # starting the pod. This is useful when debugging, but should be turned
+        # off in production.
+        imagePullPolicy: Always
+        # env:
+        # - name: WORDPRESS_DB_HOST
+        #   value: 127.0.0.1:3306
+        # - name: WORDPRESS_DB_PASSWORD
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: cloudsql
+        #       key: password
+        # - name: WORDPRESS_DB_USER
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: cloudsql
+        #       key: username
+        # The faceswap process listens on port 8080 for web traffic by default.
+        ports:
+        - name: http-server
+          containerPort: 8080
+      - name: cloudsql-proxy
+        image: b.gcr.io/cloudsql-docker/gce-proxy:1.05
+        command: ["/cloud_sql_proxy", "--dir=/cloudsql",
+                  "-instances=cloud-next-php:us-central1:cloud-next-php=tcp:3306",
+                  "-credential_file=/secrets/cloudsql/credentials.json"]
+        volumeMounts:
+        - name: cloudsql-oauth-credentials
+          mountPath: /secrets/cloudsql
+          readOnly: true
+        - name: ssl-certs
+          mountPath: /etc/ssl/certs
+        - name: cloudsql
+          mountPath: /cloudsql
+      volumes:
+      - name: cloudsql-oauth-credentials
+        secret:
+          secretName: cloudsql-oauth-credentials
+      - name: ssl-certs
+        hostPath:
+          path: /etc/ssl/certs
+      - name: cloudsql
+        emptyDir:

@@ -26,13 +26,22 @@ use Symfony\Bridge\Twig\Form\TwigRenderer;
 use Symfony\Bridge\Twig\Form\TwigRendererEngine;
 use Symfony\Bridge\Twig\Extension\TranslationExtension;
 use Symfony\Component\Translation\Translator;
+use Faceswap\SettingsPage;
 
-if ( ! defined( 'ABSPATH' ) ) exit; // Exit if accessed directly
+if (! defined('ABSPATH')) {
+    // Exit if accessed directly
+    exit;
+}
+
+// autoload vendors
+require_once __DIR__ . '/../../../vendor/autoload.php';
+
+if (is_admin()) {
+    SettingsPage::register();
+}
 
 add_option('google_cloud_project_id');
 add_option('google_cloud_bucket_name');
-
-include __DIR__ . '/options.php';
 
 function get_cloud_storage()
 {
@@ -62,7 +71,7 @@ function get_twig()
 
     $twig = new Twig_Environment(new Twig_Loader_Filesystem(array(
         $viewsDir,
-        $vendorTwigBridgeDir.'/Resources/views/Form',
+        $vendorTwigBridgeDir . '/Resources/views/Form',
     )));
     $formEngine = new TwigRendererEngine(array($defaultFormTheme));
     $twig->addRuntimeLoader(new \Twig_FactoryRuntimeLoader(array(
@@ -81,7 +90,6 @@ function get_twig()
 
 function render_faceswap_form()
 {
-    require_once __DIR__ . '/../../../vendor/autoload.php';
     $content = include __DIR__ . '/app.php';
     print($content);
 }

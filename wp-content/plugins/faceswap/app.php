@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright 2015 Google Inc.
+ * Copyright 2017 Google Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,41 +24,47 @@ $datastore = get_cloud_datastore();
 $options = get_option('faceswap');
 $projectId = $options['project_id'];
 $bucketName = $options['bucket_name'];
+$serviceUrl = $options['service_url'];
 $formFactory = Forms::createFormFactory();
 $form = $formFactory
     ->createBuilder('form')
-    ->add('Image1', 'file')
-    ->add('Image2', 'file')
+    ->add('base_image', 'file')
+    ->add('face_image', 'file')
     ->getForm();
 $form->handleRequest();
 $content = '';
 if ($form->isValid()) {
+    if (empty($projectId) || empty($bucketName) || empty($serviceUrl)) {
+        die('You must set the Project ID, ' .
+            'Bucket Name, and Service URL in Faceswap Settings');
+    }
     // upload the images to Google Cloud Storage
     $files = $_FILES['form'];
     $bucket = $storage->bucket($bucketName);
     $prefix = 'tmp-' . time() . '/';
-
-    $img1 = 'uploads/' . $prefix . $files['name']['Image1'];
-    $img2 = 'uploads/' . $prefix . $files['name']['Image2'];
+    $img1 = 'uploads/' . $prefix . $files['name']['base_image'];
+    $img2 = 'uploads/' . $prefix . $files['name']['face_image'];
     $bucket->upload(
-        fopen($files['tmp_name']['Image1'], 'r'),
+        fopen($files['tmp_name']['base_image'], 'r'),
         ['name' => $img1]
     );
     $bucket->upload(
-        fopen($files['tmp_name']['Image2'], 'r'),
+        fopen($files['tmp_name']['face_image'], 'r'),
         ['name' => $img2]
+    );
+
+    $serviceUrl = $serviceUrl ?: sprintf(
+        'https://worker-dot-%s.appspot.com/',
+        $projectId
     );
 
     // make the call to the faceswap app
     $http = new Client([
-        'base_uri' => sprintf(
-            'https://worker-dot-%s.appspot.com/',
-            $projectId
-        ),
+        'base_uri' => $serviceUrl
     ]);
     $response = $http->get('/', ['query' => [
-        'image1' => $img1,
-        'image2' => $img2,
+        'base_image' => $img1,
+        'face_image' => $img2,
         'bucket' => $bucketName
     ]]);
 
