@@ -33,31 +33,43 @@ $form = $formFactory
 $form->handleRequest();
 $content = '';
 if ($form->isValid()) {
-    if (empty($serviceUrl)) {
-        die('You must set the Service URL in Faceswap Settings');
+    try {
+        if (empty($serviceUrl)) {
+            throw new LogicException('You must set the Service URL in ' .
+                'Faceswap Settings.');
+        }
+        // upload the images to Google Cloud Storage
+        $files = $_FILES['form']['tmp_name'];
+        if (empty($files['base_image']) || empty($files['face_image'])) {
+            throw new InvalidArgumentException('One or more files failed to ' .
+                'upload.');
+        }
+        $image1Path = convert_image_to_jpeg($files['base_image']);
+        $image2Path = convert_image_to_jpeg($files['face_image']);
+        $img1 = file_get_contents($image1Path);
+        $img2 = file_get_contents($image2Path);
+
+        // make the call to the faceswap app
+        $http = new Client([
+            'base_uri' => $serviceUrl
+        ]);
+        $response = $http->post('/', ['json' => [
+            'image1' => base64_encode($img1),
+            'image2' => base64_encode($img2)
+        ]]);
+
+        if (!trim($imageBase64 = $response->getBody())) {
+            throw new Exception('A face was not found in one or ' .
+                'more of the uploaded images!');
+        }
+
+        $content .= sprintf(
+            '<img src="data:image/jpeg;base64, %s" />',
+            $imageBase64
+        );
+    } catch (Exception $e) {
+        $content .= '<div class="error">' . $e->getMessage() . '</div>';
     }
-    // upload the images to Google Cloud Storage
-    $files = $_FILES['form'];
-    $img1 = file_get_contents($files['tmp_name']['base_image']);
-    $img2 = file_get_contents($files['tmp_name']['face_image']);
-
-    $serviceUrl = $serviceUrl ?: sprintf(
-        'https://worker-dot-%s.appspot.com/',
-        $projectId
-    );
-
-    // make the call to the faceswap app
-    $http = new Client([
-        'base_uri' => $serviceUrl
-    ]);
-
-    $response = $http->post('/', ['json' => [
-        'image1' => base64_encode($img1),
-        'image2' => base64_encode($img2)
-    ]]);
-
-    $content .= sprintf('<img src="data:image/jpeg;base64, %s" />',
-        $response->getBody());
 }
 
 return $content . $twig->render('faceswap.html.twig', [

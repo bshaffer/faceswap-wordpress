@@ -78,6 +78,32 @@ function get_twig()
     return $twig;
 }
 
+function convert_image_to_jpeg($imagePath)
+{
+    // jpg, png, gif or bmp?
+    if (false === $imgInfo = getimagesize($imagePath)) {
+        throw new InvalidArgumentException('Image not found or not an image');
+    }
+
+    switch ($imgInfo[2]) {
+        case IMAGETYPE_GIF:
+            $src = imagecreatefromgif($imagePath);
+            break;
+        case IMAGETYPE_JPEG:
+            // Do nothing! We are already JPEG format
+            return $imagePath;
+        case IMAGETYPE_PNG:
+            $src = imagecreatefrompng($imagePath);
+            break;
+        default:
+            throw new InvalidArgumentException('Unsupported filetype');
+    }
+
+    imagejpeg($src, $imagePath . '.jpg');
+    imagedestroy($src);
+    return $imagePath . '.jpg';
+}
+
 function render_faceswap_form()
 {
     $content = include __DIR__ . '/app.php';
