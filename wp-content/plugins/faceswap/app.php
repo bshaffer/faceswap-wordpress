@@ -35,8 +35,16 @@ $content = '';
 if ($form->isValid()) {
     try {
         if (empty($serviceUrl)) {
-            throw new LogicException('You must set the Service URL in ' .
-                'Faceswap Settings.');
+            if (!getenv('FACESWAP_WORKER_SERVICE_HOST')) {
+                throw new LogicException('You must set the Service URL in ' .
+                    'Faceswap Settings or deploy a "faceswap-worker" service ' .
+                    'with Kubernetes.');
+            }
+            $serviceUrl = sprintf(
+                '%s:%s',
+                getenv('FACESWAP_WORKER_SERVICE_PORT'),
+                getenv('FACESWAP_WORKER_SERVICE_HOST')
+            );
         }
         // upload the images to Google Cloud Storage
         $files = $_FILES['form']['tmp_name'];
