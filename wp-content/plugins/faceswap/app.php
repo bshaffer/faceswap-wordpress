@@ -33,24 +33,13 @@ $form = $formFactory
 $form->handleRequest();
 $content = '';
 if ($form->isValid()) {
-    if (empty($projectId) || empty($bucketName) || empty($serviceUrl)) {
-        die('You must set the Project ID, ' .
-            'Bucket Name, and Service URL in Faceswap Settings');
+    if (empty($serviceUrl)) {
+        die('You must set the Service URL in Faceswap Settings');
     }
     // upload the images to Google Cloud Storage
     $files = $_FILES['form'];
-    $bucket = $storage->bucket($bucketName);
-    $prefix = 'tmp-' . time() . '/';
-    $img1 = 'uploads/' . $prefix . $files['name']['base_image'];
-    $img2 = 'uploads/' . $prefix . $files['name']['face_image'];
-    $bucket->upload(
-        fopen($files['tmp_name']['base_image'], 'r'),
-        ['name' => $img1]
-    );
-    $bucket->upload(
-        fopen($files['tmp_name']['face_image'], 'r'),
-        ['name' => $img2]
-    );
+    $img1 = file_get_contents($files['tmp_name']['base_image']);
+    $img2 = file_get_contents($files['tmp_name']['face_image']);
 
     $serviceUrl = $serviceUrl ?: sprintf(
         'https://worker-dot-%s.appspot.com/',
@@ -62,15 +51,13 @@ if ($form->isValid()) {
         'base_uri' => $serviceUrl
     ]);
 
-    $response = $http->get('/', ['query' => [
-        'image1' => $img1,
-        'image2' => $img2,
-        'bucket' => $bucketName
+    $response = $http->post('/', ['json' => [
+        'image1' => base64_encode($img1),
+        'image2' => base64_encode($img2)
     ]]);
 
-    $object = $bucket->object('output.jpg');
     $content .= sprintf('<img src="data:image/jpeg;base64, %s" />',
-        base64_encode($object->downloadAsString()));
+        $response->getBody());
 }
 
 return $content . $twig->render('faceswap.html.twig', [
