@@ -27,11 +27,12 @@ $serviceUrl = SettingsPage::getServiceUrl();
 $formFactory = Forms::createFormFactory();
 $form = $formFactory
     ->createBuilder('form')
-    ->add('base_image', 'file')
+    ->add('base_image', 'file', ['multiple' => true])
     ->add('face_image', 'file')
     ->getForm();
 $form->handleRequest();
-$content = '';
+$error = null;
+$imageBase64 = null;
 if ($form->isValid()) {
     try {
         if (empty($serviceUrl)) {
@@ -67,19 +68,16 @@ if ($form->isValid()) {
         ]]);
 
         if (!trim($imageBase64 = $response->getBody())) {
-            throw new Exception('A face was not found in one or ' .
-                'more of the uploaded images!');
+            throw new Exception('A face was not found in one or more of the ' .
+                'uploaded images!');
         }
-
-        $content .= sprintf(
-            '<img src="data:image/jpeg;base64, %s" />',
-            $imageBase64
-        );
     } catch (Exception $e) {
-        $content .= '<div class="error">' . $e->getMessage() . '</div>';
+        $error = '<div class="error">' . $e->getMessage() . '</div>';
     }
 }
 
-return $content . $twig->render('faceswap.html.twig', [
-    'form' => $form->createView()
+return $twig->render('faceswap.html.twig', [
+    'form' => $form->createView(),
+    'image' => $imageBase64,
+    'error' => $error
 ]);

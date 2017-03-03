@@ -1,3 +1,10 @@
+{% if error %}
+    <div class="error">{{ error }}</div>
+{% endif %}
+{% if error %}
+    <img src="data:image/jpeg;base64, {{ image }}" />
+{% endif %}
+
 <form action="" method="POST" enctype="multipart/form-data">
     <fieldset>
         <legend>Image Uploads</legend>
