@@ -27,12 +27,13 @@ $serviceUrl = SettingsPage::getServiceUrl();
 $formFactory = Forms::createFormFactory();
 $form = $formFactory
     ->createBuilder('form')
-    ->add('base_image', 'file', ['multiple' => true])
     ->add('face_image', 'file')
+    ->add('base_images', 'file', [
+        'multiple' => true
+    ])
     ->getForm();
 $form->handleRequest();
 $error = null;
-$imageBase64 = null;
 if ($form->isValid()) {
     try {
         if (empty($serviceUrl)) {
@@ -49,35 +50,30 @@ if ($form->isValid()) {
         }
         // upload the images to Google Cloud Storage
         $files = $_FILES['form']['tmp_name'];
-        if (empty($files['base_image']) || empty($files['face_image'])) {
+        if (empty($files['base_images']) || empty($files['face_image'])) {
             throw new InvalidArgumentException('One or more files failed to ' .
                 'upload.');
         }
-        $image1Path = convert_image_to_jpeg($files['base_image']);
-        $image2Path = convert_image_to_jpeg($files['face_image']);
-        $img1 = file_get_contents($image1Path);
-        $img2 = file_get_contents($image2Path);
-
-        // make the call to the faceswap app
-        $http = new Client([
-            'base_uri' => $serviceUrl
-        ]);
-        $response = $http->post('/', ['json' => [
-            'image1' => base64_encode($img1),
-            'image2' => base64_encode($img2)
-        ]]);
-
-        if (!trim($imageBase64 = $response->getBody())) {
-            throw new Exception('A face was not found in one or more of the ' .
-                'uploaded images!');
+        $baseImages = [];
+        foreach((array) $files['base_images'] as $baseImagePath) {
+            $baseImageJpeg = convert_image_to_jpeg($baseImagePath);
+            $baseImages[] = base64_encode(file_get_contents($baseImageJpeg));
         }
+        $faceImageJpeg = convert_image_to_jpeg($files['face_image']);
+        $faceImage = base64_encode(file_get_contents($faceImageJpeg));;;
+        return $twig->render('faceswap.html.twig', [
+            'form' => $form->createView(),
+            'faceImage' => $faceImage,
+            'baseImages' => $baseImages,
+            'serviceUrl' => $serviceUrl,
+            'cols' => ceil(sqrt(count($baseImages))),
+        ]);
     } catch (Exception $e) {
-        $error = '<div class="error">' . $e->getMessage() . '</div>';
+        $error = $e->getMessage();
     }
 }
 
 return $twig->render('faceswap.html.twig', [
     'form' => $form->createView(),
-    'image' => $imageBase64,
     'error' => $error
 ]);

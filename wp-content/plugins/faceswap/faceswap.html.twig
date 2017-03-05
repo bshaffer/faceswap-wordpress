@@ -1,11 +1,59 @@
-{% if error %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+{% if error is defined and error %}
     <div class="error">{{ error }}</div>
 {% endif %}
-{% if error %}
-    <img src="data:image/jpeg;base64, {{ image }}" />
+{% if baseImages is defined and faceImage is defined %}
+{% set baseImagesLength = baseImages|length %}
+<div class="uploaded-images">
+    <div class="face-image">
+        <img src="data:image/jpeg;base64, {{ faceImage }}" />
+    </div>
+    <table class="base-images">
+    <tr>
+    {% for baseImage in baseImages %}
+        <td class="base-image">
+        <img src="data:image/jpeg;base64, {{ baseImage }}" />
+        <script type="text/javascript">
+        var request = $.ajax({
+            url: '{{ serviceUrl }}',
+            method: "POST",
+            data: JSON.stringify({
+                image1: $('.base-image img:eq({{loop.index-1}})').attr('src').split(',')[1],
+                image2: $('.face-image img').attr('src').split(',')[1]
+            }),
+            headers: {'content-type': 'application/json'}
+        });
+        request.done(function(result) {
+            console.log('it worked!');
+            $('.result-images .result-image-{{loop.index}}').append(
+                '<img src="data:image/jpeg;base64, ' + result + '" />'
+            );
+        });
+        request.fail(function(jqXHR, textStatus) {
+            console.log('it didnt work :(');
+            $('.error').append(textStatus);
+        });
+        </script>
+        </td>
+        {% if 0 == loop.index % cols and not loop.last %}</tr><tr>{% endif %}
+    {% endfor %}
+    </tr>
+    </table>
+</div>
+<hr />
+<div class="result-images">
+    <table>
+        <tr>
+    {% for baseImage in baseImages %}
+        <td class="result-image-{{loop.index}}"></td>
+        {% if 0 == loop.index % cols and not loop.last %}</tr><tr>{% endif %}
+    {% endfor %}
+        </tr>
+    </table>
+</div>
 {% endif %}
 
-<form action="" method="POST" enctype="multipart/form-data">
+<form class="faceswap-upload-form" action="" method="POST" enctype="multipart/form-data">
     <fieldset>
         <legend>Image Uploads</legend>
         {{ form_widget(form) }}
@@ -20,4 +68,49 @@
     padding: 10px;
     margin-bottom: 10px;
 }
+.uploaded-images {
+    display:inherit;
+    height: 1em;
+}
+.face-image {
+    float:left;
+    width:48%;
+    margin: 1%;
+    /*height: 50vw;*/
+}
+.base-images {
+    float:left;
+    width:48%;
+    margin: 1%;
+    /*height: 50vw;*/
+}
+{% if baseImagesLength is defined and baseImageLength != 0 %}
+.base-images img {
+    max-height: {{ 17/(baseImagesLength/cols|round(1, 'ceil')) }}vw;
+}
+.result-images img {
+    max-height: {{ 40/(baseImagesLength/cols|round(1, 'ceil')) }}vw;
+}
+{% endif %}
+.home .entry-header {
+    display:none;
+}
+.entry-content {
+    width:100% !important;
+}
+.faceswap-upload-form {
+    clear:left;
+}
+table, caption, tbody, tfoot, thead, tr, th, td {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    font-size: 100%;
+    vertical-align: baseline;
+    background: transparent;
+}
+/*.home .wrap {
+    max-width: none;
+}*/
 </style>
