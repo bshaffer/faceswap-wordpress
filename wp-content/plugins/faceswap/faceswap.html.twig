@@ -76,17 +76,18 @@
     float:left;
     width:48%;
     margin: 1%;
-    /*height: 50vw;*/
 }
 .base-images {
     float:left;
     width:48%;
     margin: 1%;
-    /*height: 50vw;*/
 }
-{% if baseImagesLength is defined and baseImageLength != 0 %}
+{% if baseImagesLength is defined and baseImagesLength != 0 %}
 .base-images img {
-    max-height: {{ 17/(baseImagesLength/cols|round(1, 'ceil')) }}vw;
+    max-width: {{ 17/(baseImagesLength/cols|round(1, 'ceil')) }}vw;
+    height: auto;
+    vertical-align: middle;
+    display: inline-block;
 }
 .result-images img {
     max-height: {{ 40/(baseImagesLength/cols|round(1, 'ceil')) }}vw;
@@ -110,7 +111,4 @@ table, caption, tbody, tfoot, thead, tr, th, td {
     vertical-align: baseline;
     background: transparent;
 }
-/*.home .wrap {
-    max-width: none;
-}*/
 </style>

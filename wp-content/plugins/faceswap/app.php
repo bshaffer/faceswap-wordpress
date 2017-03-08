@@ -44,8 +44,8 @@ if ($form->isValid()) {
             }
             $serviceUrl = sprintf(
                 '%s:%s',
-                getenv('FACESWAP_WORKER_SERVICE_PORT'),
-                getenv('FACESWAP_WORKER_SERVICE_HOST')
+                getenv('FACESWAP_WORKER_SERVICE_HOST'),
+                getenv('FACESWAP_WORKER_SERVICE_PORT')
             );
         }
         // upload the images to Google Cloud Storage
