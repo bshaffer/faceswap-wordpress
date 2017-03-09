@@ -40,6 +40,8 @@ if (is_admin()) {
     SettingsPage::register();
 }
 
+wp_register_style('faceswap', plugins_url ('css/faceswap.css', __FILE__ ));
+
 function get_cloud_storage()
 {
     return new StorageClient([

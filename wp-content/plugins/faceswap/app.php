@@ -19,8 +19,11 @@ use Faceswap\SettingsPage;
 use GuzzleHttp\Client;
 use Symfony\Component\Form\Forms;
 
+// register the stylesheet
+wp_enqueue_style('faceswap');
+
+// get the twig service
 $twig = get_twig();
-$storage = get_cloud_storage();
 $projectId = SettingsPage::getProjectId();
 $bucketName = SettingsPage::getBucketName();
 $serviceUrl = SettingsPage::getServiceUrl();
