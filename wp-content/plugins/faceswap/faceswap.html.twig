@@ -3,6 +3,55 @@
     <div class="error">{{ error }}</div>
 {% endif %}
 {% if baseImages is defined and faceImage is defined %}{% set baseImagesLength = baseImages|length %}
+<style>
+.base-images .image-crop {
+    width: {{ 440/cols }}px;
+    height: {{ 440/cols }}px;
+}
+.base-images img {
+    width: {{ 440/cols }}px;
+}
+.result-images .image-crop {
+    width: {{ min(700, 900/cols) }}px;
+    height: {{ 900/cols }}px;
+}
+.result-images img {
+    width: {{ min(700, 900/cols) }}px;
+}
+</style>
+
+<!-- import and configure firebase -->
+<script src="https://www.gstatic.com/firebasejs/4.9.0/firebase.js"></script>
+<script src="https://www.gstatic.com/firebasejs/4.9.0/firebase-firestore.js"></script>
+<script>
+  // Initialize Firebase
+  var config = {
+    apiKey: "AIzaSyDVTfifLqK5PUUOhjK8H2HARuVnO0MNT_U",
+    authDomain: "cloud-next-php.firebaseapp.com",
+    databaseURL: "https://cloud-next-php.firebaseio.com",
+    projectId: "cloud-next-php",
+    storageBucket: "cloud-next-php.appspot.com",
+    messagingSenderId: "746522047361"
+  };
+  firebase.initializeApp(config);
+  db = firebase.firestore();
+  db.collection("faceswap").doc('{{ documentId }}')
+    .onSnapshot(function(doc) {
+        for (var i in doc.data()) {
+            if (!document.getElementById('faceswap-image-' + i)) {
+                img = new Image();
+                img.src = 'data:image/jpeg;base64,' + doc.data()[i].e;
+                img.id = "faceswap-image-" + i;
+                div = document.getElementById('faceswap-' + i);
+                div.innerHTML = '';
+                img.onload = function() {
+                  div.appendChild(img);
+                };
+            }
+        }
+    });
+</script>
+
 <div class="uploaded-images">
     <div class="face-image">
         <img src="data:image/jpeg;base64, {{ faceImage }}" />
@@ -14,26 +63,6 @@
             <div class="image-crop">
                 <img src="data:image/jpeg;base64, {{ baseImage }}" />
             </div>
-            <script type="text/javascript">
-            var request = $.ajax({
-                url: '{{ serviceUrl }}',
-                method: "POST",
-                data: JSON.stringify({
-                    image1: $('.base-image img:eq({{loop.index-1}})').attr('src').split(',')[1],
-                    image2: $('.face-image img').attr('src').split(',')[1]
-                }),
-                headers: {'content-type': 'application/json'}
-            });
-            request.done(function(result) {
-                $('.result-images .result-image-{{loop.index}}').html(
-                    '<img src="data:image/jpeg;base64, ' + result + '" />'
-                );
-            });
-            request.fail(function(jqXHR, textStatus) {
-                console.log('it didnt work :(');
-                $('.error').append(textStatus);
-            });
-            </script>
         </div>
         {% if 0 == loop.index % cols and not loop.last %}
             </div><div class="row">
@@ -45,7 +74,7 @@
 <div class="result-images">
     <div class="row">
     {% for baseImage in baseImages %}
-        <div class="image-crop result-image-{{loop.index}}">
+        <div class="image-crop" id="faceswap-img{{loop.index - 1}}">
             <svg class="spinner" width="25px" height="25px" viewBox="0 0 66 66" xmlns="http://www.w3.org/2000/svg"><circle class="path" fill="none" stroke-width="6" stroke-linecap="round" cx="33" cy="33" r="30"></circle>
             </svg>
         </div>
@@ -64,21 +93,3 @@
     </fieldset>
     <input type="submit" value="Upload" />
 </form>
-{% if baseImagesLength is defined and baseImagesLength != 0 %}
-<style>
-.base-images .image-crop {
-    width: {{ 440/cols }}px;
-    height: {{ 440/cols }}px;
-}
-.base-images img {
-    width: {{ 440/cols }}px;
-}
-.result-images .image-crop {
-    width: {{ 900/cols }}px;
-    height: {{ 900/cols }}px;
-}
-.result-images img {
-    width: {{ 900/cols }}px;
-}
-</style>
-{% endif %}

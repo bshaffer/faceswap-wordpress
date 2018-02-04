@@ -20,7 +20,9 @@
  */
 
 use Google\Cloud\Storage\StorageClient;
-use Google\Cloud\Datastore\DatastoreClient;
+use Google\Cloud\PubSub\PubSubClient;
+use Google\Auth\CredentialsLoader;
+use Google\Auth\ApplicationDefaultCredentials;
 use Symfony\Bridge\Twig\Extension\FormExtension;
 use Symfony\Bridge\Twig\Form\TwigRenderer;
 use Symfony\Bridge\Twig\Form\TwigRendererEngine;
@@ -40,12 +42,24 @@ if (is_admin()) {
     SettingsPage::register();
 }
 
-wp_register_style('faceswap', plugins_url ('css/faceswap.css', __FILE__ ));
+wp_register_style('faceswap', plugins_url('css/faceswap.css', __FILE__ ));
+
+function get_gcloud_project_id()
+{
+    return getenv('GCLOUD_PROJECT');
+}
 
 function get_cloud_storage()
 {
     return new StorageClient([
-        'projectId' => SettingsPage::getProjectId(),
+        'projectId' => get_gcloud_project_id(),
+    ]);
+}
+
+function get_pubsub_client()
+{
+    return new PubSubClient([
+        'projectId' => get_gcloud_project_id(),
     ]);
 }
 
@@ -80,6 +94,27 @@ function get_twig()
     return $twig;
 }
 
+function create_new_firebase_document()
+{
+    // create firebase document
+    $http = CredentialsLoader::makeHttpClient(
+        ApplicationDefaultCredentials::getCredentials(
+            'https://www.googleapis.com/auth/datastore'
+        )
+    );
+    $baseUrl = 'firestore.googleapis.com';
+    $path = sprintf(
+        'https://%s/v1beta1/projects/%s/databases/%s/documents/faceswap',
+        $baseUrl,
+        get_gcloud_project_id(),
+        '(default)'
+    );
+    $response = $http->request('post', $path);
+    $json = json_decode((string) $response->getBody(), true);
+    // return the document ID
+    return @end(explode('/', $json['name']));
+}
+
 function convert_image_to_jpeg($imagePath)
 {
     // jpg, png, gif or bmp?
@@ -93,7 +128,8 @@ function convert_image_to_jpeg($imagePath)
             break;
         case IMAGETYPE_JPEG:
             // Do nothing! We are already JPEG format
-            return $imagePath;
+            $src = imagecreatefromjpeg($imagePath);
+            break;
         case IMAGETYPE_PNG:
             $src = imagecreatefrompng($imagePath);
             break;
@@ -101,6 +137,7 @@ function convert_image_to_jpeg($imagePath)
             throw new InvalidArgumentException('Unsupported filetype');
     }
 
+    $src = imagescale($src, 700);
     imagejpeg($src, $imagePath . '.jpg');
     imagedestroy($src);
     return $imagePath . '.jpg';

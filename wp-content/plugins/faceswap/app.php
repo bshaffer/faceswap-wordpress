@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-use Faceswap\SettingsPage;
-use GuzzleHttp\Client;
 use Symfony\Component\Form\Forms;
 
 // register the stylesheet
@@ -24,14 +22,16 @@ wp_enqueue_style('faceswap');
 
 // get the twig service
 $twig = get_twig();
-$projectId = SettingsPage::getProjectId();
-$bucketName = SettingsPage::getBucketName();
-$serviceUrl = SettingsPage::getServiceUrl();
+$pubsub = get_pubsub_client();
+$topic = $pubsub->topic('process-faceswap');
 $formFactory = Forms::createFormFactory();
 $form = $formFactory
     ->createBuilder('form')
-    ->add('face_image', 'file')
+    ->add('face_image', 'file', [
+        'attr' => ['accept' => 'images/*']
+    ])
     ->add('base_images', 'file', [
+        'attr' => ['accept' => 'images/*'],
         'multiple' => true
     ])
     ->getForm();
@@ -39,36 +39,37 @@ $form->handleRequest();
 $error = null;
 if ($form->isValid()) {
     try {
-        if (empty($serviceUrl)) {
-            if (!getenv('FACESWAP_WORKER_SERVICE_HOST')) {
-                throw new LogicException('You must set the Service URL in ' .
-                    'Faceswap Settings or deploy a "faceswap-worker" service ' .
-                    'with Kubernetes.');
-            }
-            $serviceUrl = sprintf(
-                '%s:%s',
-                getenv('FACESWAP_WORKER_SERVICE_HOST'),
-                getenv('FACESWAP_WORKER_SERVICE_PORT')
-            );
-        }
         // upload the images to Google Cloud Storage
         $files = $_FILES['form']['tmp_name'];
         if (empty($files['base_images']) || empty($files['face_image'])) {
             throw new InvalidArgumentException('One or more files failed to ' .
                 'upload.');
         }
-        $baseImages = [];
-        foreach((array) $files['base_images'] as $baseImagePath) {
-            $baseImageJpeg = convert_image_to_jpeg($baseImagePath);
-            $baseImages[] = base64_encode(file_get_contents($baseImageJpeg));
-        }
+        $documentId = create_new_firebase_document();
         $faceImageJpeg = convert_image_to_jpeg($files['face_image']);
-        $faceImage = base64_encode(file_get_contents($faceImageJpeg));;;
+        $faceImage = base64_encode(file_get_contents($faceImageJpeg));
+        $baseImages = [];
+        foreach((array) $files['base_images'] as $i => $baseImagePath) {
+            $baseImageJpeg = convert_image_to_jpeg($baseImagePath);
+            $baseImage = base64_encode(file_get_contents($baseImageJpeg));
+            $topic->publish([
+                'data' => json_encode([
+                    'faceImage' => $faceImage,
+                    'baseImage' => $baseImage,
+                ]),
+                'attributes' => [
+                    'imageName' => (string) $i,
+                    'documentId' => $documentId,
+                ]
+            ]);
+            $baseImages[$i] = $baseImage;
+        }
+
         return $twig->render('faceswap.html.twig', [
             'form' => $form->createView(),
             'faceImage' => $faceImage,
             'baseImages' => $baseImages,
-            'serviceUrl' => $serviceUrl,
+            'documentId' => $documentId,
             'cols' => ceil(sqrt(count($baseImages))),
         ]);
     } catch (Exception $e) {

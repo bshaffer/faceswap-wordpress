@@ -1,7 +1,23 @@
 # This file configures the faceswap application frontend. The frontend serves
 # public web traffic.
-
-apiVersion: extensions/v1beta1
+apiVersion: v1
+kind: Service
+metadata:
+  name: faceswap-wordpress
+  labels:
+    app: faceswap
+    tier: wordpress
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: http-server
+  selector:
+    app: faceswap
+    tier: wordpress
+---
+apiVersion: apps/v1beta1
+# apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: faceswap-wordpress
@@ -12,7 +28,7 @@ metadata:
 # For more info about Pods see:
 #   https://cloud.google.com/container-engine/docs/pods/
 spec:
-  replicas: 3
+  replicas: 1
   template:
     metadata:
       labels:
@@ -31,30 +47,14 @@ spec:
         # The faceswap process listens on port 8080 for web traffic by default.
         env:
         - name: WORDPRESS_DB_NAME
-          value: faceswap_wordpress_k8s
+          value: wordpress
+        - name: WORDPRESS_DB_HOST
+          value: wordpress-mysql
+        - name: WORDPRESS_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-pass
+              key: password
         ports:
         - name: http-server
           containerPort: 8080
-      # Configuration for the CloudSQL proxy sidecar container
-      - name: cloudsql-proxy
-        image: b.gcr.io/cloudsql-docker/gce-proxy:1.05
-        command: ["/cloud_sql_proxy", "--dir=/cloudsql",
-                  "-instances=cloud-next-php:us-central1:cloud-next-php=tcp:3306",
-                  "-credential_file=/secrets/cloudsql/credentials.json"]
-        volumeMounts:
-        - name: cloudsql-oauth-credentials
-          mountPath: /secrets/cloudsql
-          readOnly: true
-        - name: ssl-certs
-          mountPath: /etc/ssl/certs
-        - name: cloudsql
-          mountPath: /cloudsql
-      volumes:
-      - name: cloudsql-oauth-credentials
-        secret:
-          secretName: cloudsql-oauth-credentials
-      - name: ssl-certs
-        hostPath:
-          path: /etc/ssl/certs
-      - name: cloudsql
-        emptyDir:
